@@ -1,25 +1,3 @@
-/**
- * Test sinewave neural network model
- * 
- * Author: Pete Warden
- * Modified by: Shawn Hymel
- * Date: March 11, 2020
- * 
- * Copyright 2019 The TensorFlow Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 // Import TensorFlow stuff
 #include "TensorFlowLite.h"
 #include "tensorflow/lite/experimental/micro/kernels/micro_ops.h"
@@ -28,17 +6,11 @@
 #include "tensorflow/lite/experimental/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/version.h"
 
-// Our model
+// model
 #include "road_analytics_model_extreme_end_hardware.h"
 
 // Figure out what's going on in our model
-#define DEBUG 1
-
-// Some settings
-constexpr int led_pin = 2;
-constexpr float pi = 3.14159265;                  // Some pi
-constexpr float freq = 0.5;                       // Frequency (Hz) of sinewave
-constexpr float period = (1 / freq) * (1000000);  // Period (microseconds)
+#define DEBUG 0
 
 // TFLite globals, used for compatibility with Arduino-style sketches
 namespace {
@@ -59,10 +31,8 @@ namespace {
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 #include "Wire.h" // To communicate with I2C devices.
-
 ////////
-#include<SoftwareSerial.h>
-SoftwareSerial BTserial(0,1);   //RX and TX
+//SoftwareSerial BTserial(0,1);   //RX and TX
 
 const int MPU_ADDR = 0x68; // I2C address of the MPU-6050
 
@@ -87,23 +57,17 @@ void setup() {
   while(!Serial);
 #endif
 
-  // Let's make an LED vary in brightness
-  pinMode(led_pin, OUTPUT);
-
   // Set up logging (will report to Serial, even within TFLite functions)
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
   // Map the model into a usable data structure
-  model = tflite::GetModel(sine_model);
+  model = tflite::GetModel(road_analytics_model_extreme_end_hardware);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     error_reporter->Report("Model version does not match Schema");
     while(1);
   }
 
-  // Pull in only needed operations (should match NN layers)
-  // Available ops:
-  //  https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/micro/kernels/micro_ops.h
   static tflite::MicroMutableOpResolver micro_mutable_op_resolver;
   micro_mutable_op_resolver.AddBuiltin(
     tflite::BuiltinOperator_FULLY_CONNECTED,
@@ -141,7 +105,7 @@ void setup() {
 
 
 /////////////////////////////////////////////////////////////////////////////////
-  BTserial.begin(9600);
+  //BTserial.begin(9600);
   Wire.begin();
   Wire.beginTransmission(MPU_ADDR); // Begins a transmission to the I2C
   Wire.write(0x6B); // PWR_MGMT_1 register
@@ -185,7 +149,7 @@ void loop() {
   // Run inference
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
-    error_reporter->Report("Invoke failed on input: %f\n", x_val);
+    error_reporter->Report("Invoke failed on input: %f\n", input_val[6]);
   }
 
   // Read predicted y value from output buffer (tensor)
